@@ -16,3 +16,5 @@ typedef struct process_thread_control_block {
 
     rlnode ptcb_list_node;
 } PTCB ;
+
+PTCB* spawn_ptcb(Task task, int argl, void * args);

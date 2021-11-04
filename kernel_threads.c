@@ -43,3 +43,25 @@ void sys_ThreadExit(int exitval)
 
 }
 
+PTCB* spawn_ptcb(Task task, int argl, void * args){
+    PTCB *ptcb = (PTCB *) malloc(sizeof(PTCB));
+
+    ptcb->task = task;
+
+    ptcb->exitval = -1;
+    ptcb->exited = 0;
+    ptcb->detached = 0;
+
+    ptcb->refcount = 0;
+
+    ptcb->argl = argl;
+
+    if(args!=NULL){
+        ptcb->args = malloc(argl);
+        memccpy(ptcb->args, args, argl);
+    }else
+        ptcb->args=NULL;
+
+    return ptcb;
+};
+
