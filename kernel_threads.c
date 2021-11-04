@@ -58,7 +58,7 @@ PTCB* spawn_ptcb(Task task, int argl, void * args){
 
     if(args!=NULL){
         ptcb->args = malloc(argl);
-        memccpy(ptcb->args, args, argl);
+        memcpy(ptcb->args, args, argl);
     }else
         ptcb->args=NULL;
 
