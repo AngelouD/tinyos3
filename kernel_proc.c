@@ -35,6 +35,7 @@ static inline void initialize_PCB(PCB* pcb)
   pcb->pstate = FREE;
   pcb->argl = 0;
   pcb->args = NULL;
+  pcb->thread_count = 0;
 
   for(int i=0;i<MAX_FILEID;i++)
     pcb->FIDT[i] = NULL;
@@ -118,7 +119,7 @@ void start_main_thread()
   int exitval;
   PTCB* ptcb = cur_thread()->ptcb;
 
-  Task call =  ptcb->task;
+  Task call = ptcb->task;
   int argl = ptcb->argl;
   void* args = ptcb->args;
 
@@ -126,6 +127,19 @@ void start_main_thread()
   Exit(exitval);
 }
 
+void start_sub_thread()
+{
+    int exitval;
+
+    PTCB* ptcb = cur_thread()->ptcb;
+
+    Task call = ptcb->task;
+    int argl = ptcb->argl;
+    void* args = ptcb->args;
+
+    exitval = call(argl, args);
+    ThreadExit(exitval);
+}
 
 /*
 	System call to create a new process.
@@ -174,18 +188,21 @@ Pid_t sys_Exec(Task call, int argl, void* args)
   else
     newproc->args=NULL;
 
-  PTCB* ptcb = spawn_ptcb(call, argl, args);
-  rlnode* ptcb_node = rlnode_init(& ptcb->ptcb_list_node, ptcb);
-  rlist_push_back(& newproc->ptcb_list_node, ptcb_node);
+
   /* 
     Create and wake up the thread for the main function. This must be the last thing
     we do, because once we wakeup the new thread it may run! so we need to have finished
     the initialization of the PCB.
    */
   if(call != NULL) {
+    PTCB* ptcb = spawn_ptcb(call, argl, args);
+    rlnode* ptcb_node = rlnode_init(& ptcb->ptcb_list_node, ptcb);
+    rlist_push_back(& newproc->ptcb_list_node, ptcb_node);
+
     TCB* tcb = spawn_thread(newproc, start_main_thread);
     ptcb->tcb = tcb;
     tcb->ptcb = ptcb;
+    newproc->thread_count++;
     wakeup(tcb);
   }
 
