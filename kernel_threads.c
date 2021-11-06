@@ -8,7 +8,16 @@
   */
 Tid_t sys_CreateThread(Task task, int argl, void* args)
 {
-	return NOTHREAD;
+    //return NOTHREAD;  not sure on how to use it
+    TCB* tcb = spawn_thread(CURPROC, start_sub_thread);
+    PTCB* ptcb = spawn_ptcb(task, argl, args);
+
+    ptcb->tcb = tcb;
+    tcb->ptcb = ptcb;
+    rlist_push_back(& CURPROC->ptcb_list_node, & ptcb->ptcb_list_node);
+    CURPROC->thread_count++;
+    wakeup(tcb);
+	return (Tid_t) ptcb;
 }
 
 /**

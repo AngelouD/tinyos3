@@ -100,4 +100,5 @@ Pid_t get_pid(PCB* pcb);
 
 /** @} */
 
+void start_sub_thread();
 #endif
