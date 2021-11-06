@@ -14,9 +14,9 @@ Tid_t sys_CreateThread(Task task, int argl, void* args)
 
     ptcb->tcb = tcb;
     tcb->ptcb = ptcb;
-    rlist_push_back(& CURPROC->ptcb_list_node, & ptcb->ptcb_list_node);
+    rlist_push_back(& CURPROC->ptcb_list, & ptcb->ptcb_list_node);
     CURPROC->thread_count++;
-    wakeup(tcb);
+    wakeup(tcb);    //not needed?
 	return (Tid_t) ptcb;
 }
 

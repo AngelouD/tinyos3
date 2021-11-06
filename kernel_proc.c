@@ -40,7 +40,7 @@ static inline void initialize_PCB(PCB* pcb)
   for(int i=0;i<MAX_FILEID;i++)
     pcb->FIDT[i] = NULL;
 
-  rlnode_init(& pcb->ptcb_list_node, NULL);
+  rlnode_init(& pcb->ptcb_list, NULL);
   rlnode_init(& pcb->children_list, NULL);
   rlnode_init(& pcb->exited_list, NULL);
   rlnode_init(& pcb->children_node, pcb);
@@ -197,7 +197,7 @@ Pid_t sys_Exec(Task call, int argl, void* args)
   if(call != NULL) {
     PTCB* ptcb = spawn_ptcb(call, argl, args);
     rlnode* ptcb_node = rlnode_init(& ptcb->ptcb_list_node, ptcb);
-    rlist_push_back(& newproc->ptcb_list_node, ptcb_node);
+    rlist_push_back(& newproc->ptcb_list, ptcb_node);
 
     TCB* tcb = spawn_thread(newproc, start_main_thread);
     ptcb->tcb = tcb;
