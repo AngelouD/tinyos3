@@ -82,6 +82,7 @@ PTCB* spawn_ptcb(Task task, int argl, void * args){
     }else
         ptcb->args=NULL;
 
+    rlnode_init(&ptcb->ptcb_list_node, ptcb);
     return ptcb;
 };
 
