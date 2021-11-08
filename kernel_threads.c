@@ -2,6 +2,7 @@
 #include "tinyos.h"
 #include "kernel_sched.h"
 #include "kernel_proc.h"
+#include "kernel_cc.h"
 
 /** 
   @brief Create a new thread in the current process.
@@ -41,7 +42,17 @@ int sys_ThreadJoin(Tid_t tid, int* exitval)
   */
 int sys_ThreadDetach(Tid_t tid)
 {
-	return -1;
+    rlnode* node_list = &CURPROC->ptcb_list;
+    rlnode* ptcb_node = rlist_find(node_list, (PTCB *) tid, NULL);
+
+    if(ptcb_node==NULL || ptcb_node->ptcb->exited == 1){
+        return -1;
+    }
+    else{
+        ptcb_node->ptcb->detached = 1;
+        kernel_broadcast(& ptcb_node->ptcb->exit_cv);
+        return 0;
+    }
 }
 
 /**
