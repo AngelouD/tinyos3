@@ -37,7 +37,39 @@ Tid_t sys_ThreadSelf()
   */
 int sys_ThreadJoin(Tid_t tid, int* exitval)
 {
-	return -1;
+    rlnode* node_list = &CURPROC->ptcb_list;
+    rlnode* ptcb_node = rlist_find(node_list, (PTCB *) tid, NULL);
+
+    if (ptcb_node == NULL){
+        return -1;
+    }
+    PTCB* ptcb = ptcb_node->ptcb;
+
+    if(ptcb == NULL || ptcb->detached || tid == sys_ThreadSelf()){
+        return -1;
+    }else{
+        ptcb->refcount ++;
+
+        while(!ptcb->exited && !ptcb->detached){
+            kernel_wait(& ptcb->exit_cv, SCHED_USER);
+        }
+
+        ptcb->refcount --;
+
+        if (ptcb->detached){
+            return -1;
+        }
+
+        if (exitval){
+            *exitval = ptcb->exitval;
+        }
+
+        if(ptcb->refcount == 0){
+            rlist_remove(& ptcb->ptcb_list_node);
+            free(ptcb);
+        }
+        return 0;
+    }
 }
 
 /**
