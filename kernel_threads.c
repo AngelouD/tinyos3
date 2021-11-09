@@ -149,6 +149,8 @@ void sys_ThreadExit(int exitval)
     /* Now, mark the process as exited. */
     CURPROC->pstate = ZOMBIE;
 
+    /* Bye-bye cruel world */
+    kernel_sleep(EXITED, SCHED_USER);
 }
 
 PTCB* spawn_ptcb(Task task, int argl, void * args){
