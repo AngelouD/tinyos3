@@ -3,6 +3,7 @@
 #include "kernel_sched.h"
 #include "kernel_proc.h"
 #include "kernel_cc.h"
+#include "kernel_streams.h"
 
 /** 
   @brief Create a new thread in the current process.
@@ -95,6 +96,58 @@ int sys_ThreadDetach(Tid_t tid)
   */
 void sys_ThreadExit(int exitval)
 {
+
+    if(get_pid(CURPROC)!=1) {
+
+        /* Reparent any children of the exiting process to the
+           initial task */
+        PCB* initpcb = get_pcb(1);
+        while(!is_rlist_empty(& CURPROC->children_list)) {
+            rlnode* child = rlist_pop_front(& CURPROC->children_list);
+            child->pcb->parent = initpcb;
+            rlist_push_front(& initpcb->children_list, child);
+        }
+
+        /* Add exited children to the initial task's exited list
+           and signal the initial task */
+        if(!is_rlist_empty(& CURPROC->exited_list)) {
+            rlist_append(& initpcb->exited_list, &CURPROC->exited_list);
+            kernel_broadcast(& initpcb->child_exit);
+        }
+
+        /* Put me into my parent's exited list */
+        rlist_push_front(& CURPROC->parent->exited_list, &CURPROC->exited_node);
+        kernel_broadcast(& CURPROC->parent->child_exit);
+
+    }
+
+    assert(is_rlist_empty(& CURPROC->children_list));
+    assert(is_rlist_empty(& CURPROC->exited_list));
+
+
+    /*
+      Do all the other cleanup we want here, close files etc.
+     */
+
+    /* Release the args data */
+    if(CURPROC->args) {
+        free(CURPROC->args);
+        CURPROC->args = NULL;
+    }
+
+    /* Clean up FIDT */
+    for(int i=0;i<MAX_FILEID;i++) {
+        if(CURPROC->FIDT[i] != NULL) {
+            FCB_decref(CURPROC->FIDT[i]);
+            CURPROC->FIDT[i] = NULL;
+        }
+    }
+
+    /* Disconnect my main_thread */
+    CURPROC->main_thread = NULL;
+
+    /* Now, mark the process as exited. */
+    CURPROC->pstate = ZOMBIE;
 
 }
 
