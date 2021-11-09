@@ -117,11 +117,10 @@ void release_PCB(PCB* pcb)
 void start_main_thread()
 {
   int exitval;
-  PTCB* ptcb = cur_thread()->ptcb;
 
-  Task call = ptcb->task;
-  int argl = ptcb->argl;
-  void* args = ptcb->args;
+  Task call =  CURPROC->main_task;
+  int argl = CURPROC->argl;
+  void* args = CURPROC->args;
 
   exitval = call(argl,args);
   Exit(exitval);
