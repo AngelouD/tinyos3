@@ -172,14 +172,10 @@ PTCB* spawn_ptcb(Task task, int argl, void * args){
     ptcb->refcount = 0;
 
     ptcb->argl = argl;
-
-    if(args!=NULL){
-        ptcb->args = xmalloc(argl);
-        memcpy(ptcb->args, args, argl);
-    }else
-        ptcb->args=NULL;
+    ptcb->args = args;
 
     rlnode_init(&ptcb->ptcb_list_node, ptcb);
+    ptcb->exit_cv = COND_INIT;
     return ptcb;
 };
 
