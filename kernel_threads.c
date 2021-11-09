@@ -99,7 +99,7 @@ void sys_ThreadExit(int exitval)
 }
 
 PTCB* spawn_ptcb(Task task, int argl, void * args){
-    PTCB *ptcb = (PTCB *) malloc(sizeof(PTCB));
+    PTCB *ptcb = (PTCB *) xmalloc(sizeof(PTCB));
 
     ptcb->task = task;
 
@@ -112,7 +112,7 @@ PTCB* spawn_ptcb(Task task, int argl, void * args){
     ptcb->argl = argl;
 
     if(args!=NULL){
-        ptcb->args = malloc(argl);
+        ptcb->args = xmalloc(argl);
         memcpy(ptcb->args, args, argl);
     }else
         ptcb->args=NULL;
