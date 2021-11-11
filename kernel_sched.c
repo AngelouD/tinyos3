@@ -229,6 +229,7 @@ void release_TCB(TCB* tcb)
 */
 
 rlnode SCHED; /* The scheduler queue */
+rlnode SCHED_2[QUEUE_AMOUNT];
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
 
@@ -270,6 +271,7 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 */
 static void sched_queue_add(TCB* tcb)
 {
+    rlist_push_back(&SCHED_2[tcb->priority], &tcb->sched_node);
 	/* Insert at the end of the scheduling list */
 	rlist_push_back(&SCHED, &tcb->sched_node);
 
@@ -333,7 +335,8 @@ static TCB* sched_queue_select(TCB* current)
 	rlnode* sel = rlist_pop_front(&SCHED);
 
 	TCB* next_thread = sel->tcb; /* When the list is empty, this is NULL */
-
+//    while((sel = rlist_pop_front(&SCHED_2[priority_selection++])) == NULL && priority_selection < QUEUE_AMOUNT){
+//    }
 	if (next_thread == NULL)
 		next_thread = (current->state == READY) ? current : &CURCORE.idle_thread;
 
@@ -539,6 +542,9 @@ static void idle_thread()
  */
 void initialize_scheduler()
 {
+    for (int i; i<QUEUE_AMOUNT; i++){
+        rlnode_init(&SCHED_2[i], NULL);
+    }
 	rlnode_init(&SCHED, NULL);
 	rlnode_init(&TIMEOUT_LIST, NULL);
 }
