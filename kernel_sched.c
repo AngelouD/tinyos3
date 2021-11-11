@@ -36,6 +36,7 @@ CCB cctx[MAX_CORES];
 */
 #define CURTHREAD (CURCORE.current_thread)
 
+#define QUEUE_AMOUNT 3
 
 /*
 	This can be used in the preemptive context to
@@ -429,6 +430,21 @@ void yield(enum SCHED_CAUSE cause)
 	/* Wake up threads whose sleep timeout has expired */
 	sched_wakeup_expired_timeouts();
 
+    switch(cause){
+        case SCHED_QUANTUM:
+            change_priority(current, 0);
+            break;
+        case SCHED_IO:
+            change_priority(current, 1);
+            break;
+        case SCHED_MUTEX:
+            if (current->last_cause == current->curr_cause)
+                change_priority(current, 0);
+            break;
+        default:
+            break;
+    }
+
 	/* Get next */
 	TCB* next = sched_queue_select(current);
 	assert(next != NULL);
@@ -561,4 +577,13 @@ void run_scheduler()
 	assert(CURTHREAD == &CURCORE.idle_thread);
 	cpu_interrupt_handler(ALARM, NULL);
 	cpu_interrupt_handler(ICI, NULL);
+}
+
+void change_priority(TCB* tcb, int increase){
+    if (increase == 1 && tcb->priority != 0){
+        tcb->priority --;
+    }else if(increase == 0 && tcb->priority < QUEUE_AMOUNT - 1){
+        tcb->priority ++;
+    }
+    assert(tcb->priority >=0 && tcb->priority <= QUEUE_AMOUNT);
 }

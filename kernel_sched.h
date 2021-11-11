@@ -275,6 +275,8 @@ void run_scheduler(void);
  */
 void initialize_scheduler(void);
 
+void change_priority(TCB* tcb, int increase);
+
 /**
   @brief Quantum (in microseconds) 
 
@@ -283,5 +285,7 @@ void initialize_scheduler(void);
 #define QUANTUM (10000L)
 
 /** @} */
+
+
 
 #endif
