@@ -172,7 +172,7 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 	tcb->last_cause = SCHED_IDLE;
 	tcb->curr_cause = SCHED_IDLE;
 
-    tcb->priority = 1;
+    tcb->priority = 0;
 
 	/* Compute the stack segment address and size */
 	void* sp = ((void*)tcb) + THREAD_TCB_SIZE;
@@ -228,8 +228,7 @@ void release_TCB(TCB* tcb)
   Both of these structures are protected by @c sched_spinlock.
 */
 
-rlnode SCHED; /* The scheduler queue */
-rlnode SCHED_2[QUEUE_AMOUNT];
+rlnode SCHED[QUEUE_AMOUNT];
 rlnode TIMEOUT_LIST; /* The list of threads with a timeout */
 Mutex sched_spinlock = MUTEX_INIT; /* spinlock for scheduler queue */
 
@@ -271,9 +270,7 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 */
 static void sched_queue_add(TCB* tcb)
 {
-    rlist_push_back(&SCHED_2[tcb->priority], &tcb->sched_node);
-	/* Insert at the end of the scheduling list */
-	rlist_push_back(&SCHED, &tcb->sched_node);
+    rlist_push_back(&SCHED[tcb->priority], &tcb->sched_node);
 
 	/* Restart possibly halted cores */
 	cpu_core_restart_one();
@@ -332,11 +329,15 @@ static void sched_wakeup_expired_timeouts()
 static TCB* sched_queue_select(TCB* current)
 {
 	/* Get the head of the SCHED list */
-	rlnode* sel = rlist_pop_front(&SCHED);
 
-	TCB* next_thread = sel->tcb; /* When the list is empty, this is NULL */
-//    while((sel = rlist_pop_front(&SCHED_2[priority_selection++])) == NULL && priority_selection < QUEUE_AMOUNT){
-//    }
+    int priority_selection = 0;
+    rlnode* sel;
+    TCB* next_thread;
+    do{
+        sel = rlist_pop_front(&SCHED[priority_selection++]);
+        next_thread = sel->tcb;
+    }while((next_thread == NULL) && priority_selection < QUEUE_AMOUNT);
+
 	if (next_thread == NULL)
 		next_thread = (current->state == READY) ? current : &CURCORE.idle_thread;
 
@@ -542,10 +543,9 @@ static void idle_thread()
  */
 void initialize_scheduler()
 {
-    for (int i; i<QUEUE_AMOUNT; i++){
-        rlnode_init(&SCHED_2[i], NULL);
+    for (int i = 0; i<QUEUE_AMOUNT; i++){
+        rlnode_init(&SCHED[i], NULL);
     }
-	rlnode_init(&SCHED, NULL);
 	rlnode_init(&TIMEOUT_LIST, NULL);
 }
 
