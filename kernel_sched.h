@@ -277,6 +277,8 @@ void initialize_scheduler(void);
 
 void change_priority(TCB* tcb, int increase);
 
+void increase_all_priorities();
+
 /**
   @brief Quantum (in microseconds) 
 

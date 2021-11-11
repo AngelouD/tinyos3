@@ -37,6 +37,7 @@ CCB cctx[MAX_CORES];
 #define CURTHREAD (CURCORE.current_thread)
 
 #define QUEUE_AMOUNT 3
+#define MAX_ITERATIONS 500
 
 /*
 	This can be used in the preemptive context to
@@ -412,6 +413,13 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 
 void yield(enum SCHED_CAUSE cause)
 {
+    int static iteration = MAX_ITERATIONS;
+    iteration--;
+    if(iteration == 0){
+        increase_all_priorities();
+        iteration = MAX_ITERATIONS;
+    }
+
 	/* Reset the timer, so that we are not interrupted by ALARM */
 	TimerDuration remaining = bios_cancel_timer();
 
@@ -592,4 +600,17 @@ void change_priority(TCB* tcb, int increase){
         tcb->priority ++;
     }
     assert(tcb->priority >=0 && tcb->priority <= QUEUE_AMOUNT);
+}
+
+void increase_all_priorities(){
+    for(int i = 1; i < QUEUE_AMOUNT; i++){
+        TCB* tcb;
+        do{
+            tcb = rlist_pop_front(&SCHED[i])->tcb;
+            if(tcb != NULL) {
+                rlist_push_back(&SCHED[i - 1], &tcb->sched_node);
+                change_priority(tcb, 1);
+            }
+        }while(tcb != NULL);
+    }
 }
