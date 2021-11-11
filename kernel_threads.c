@@ -148,6 +148,14 @@ void sys_ThreadExit(int exitval)
                 CURPROC->FIDT[i] = NULL;
             }
         }
+
+        //Not sure if correct gotta check
+        while(rlist_find(&CURPROC->ptcb_list, ptcb, FREE) != NULL) {
+            if (ptcb->refcount < 1) {
+                rlist_remove(&ptcb->ptcb_list_node);
+                free(ptcb);
+            }
+        }
     }
 
     /* Disconnect my main_thread */
