@@ -126,6 +126,11 @@ void start_main_thread()
   Exit(exitval);
 }
 
+/*
+ * This function is provided as an argument to spawn,
+ * to execute new threads. The only difference with the main thread
+ * is that when finished, ThreadExit is called instead of Exit
+ */
 void start_sub_thread()
 {
     int exitval;
@@ -192,6 +197,10 @@ Pid_t sys_Exec(Task call, int argl, void* args)
     Create and wake up the thread for the main function. This must be the last thing
     we do, because once we wakeup the new thread it may run! so we need to have finished
     the initialization of the PCB.
+
+    A new PTCB is initialized, and it's pushed in the nodes of the new PCB
+    A new TCB is created and linked with the PTCB.
+    The amount of threads running on the new process is increased.
    */
   if(call != NULL) {
     PTCB* ptcb = spawn_ptcb(call, argl, args);

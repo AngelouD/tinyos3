@@ -101,7 +101,7 @@ enum SCHED_CAUSE {
 typedef struct thread_control_block {
 
 	PCB* owner_pcb; /**< @brief This is null for a free TCB */
-	PTCB* ptcb;
+	PTCB* ptcb; /**< @brief The connected PTCB */
 
     int priority;
 
@@ -275,8 +275,23 @@ void run_scheduler(void);
  */
 void initialize_scheduler(void);
 
+/**
+ * @brief Change the priority of a thread
+ *
+ * This function either increments or decrements the priority of a thread
+ *
+ * @param tcb the thread we want to change the priority of
+ * @param increase 1 to increase priority
+ * @param increase 0 to decrease priority
+ */
 void change_priority(TCB* tcb, int increase);
 
+/**
+ * @brief Increment all threads priorities by one
+ *
+ * This function iterates through all available threads in all queues
+ * and increase their priority
+ */
 void increase_all_priorities();
 
 /**

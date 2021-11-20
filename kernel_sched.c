@@ -36,8 +36,8 @@ CCB cctx[MAX_CORES];
 */
 #define CURTHREAD (CURCORE.current_thread)
 
-#define QUEUE_AMOUNT 3
-#define MAX_ITERATIONS 500
+#define QUEUE_AMOUNT 10 /* Amount of total priority queues */
+#define MAX_ITERATIONS 1000  /* At how many iterations of the scheduler the priority of all threads is incremented */
 
 /*
 	This can be used in the preemptive context to
@@ -173,6 +173,7 @@ TCB* spawn_thread(PCB* pcb, void (*func)())
 	tcb->last_cause = SCHED_IDLE;
 	tcb->curr_cause = SCHED_IDLE;
 
+    /* The priority of the new thread is set to the highest on init */
     tcb->priority = 0;
 
 	/* Compute the stack segment address and size */
@@ -271,6 +272,7 @@ static void sched_register_timeout(TCB* tcb, TimerDuration timeout)
 */
 static void sched_queue_add(TCB* tcb)
 {
+    /* We push the thread to the appropriate priority queue */
     rlist_push_back(&SCHED[tcb->priority], &tcb->sched_node);
 
 	/* Restart possibly halted cores */
@@ -329,16 +331,21 @@ static void sched_wakeup_expired_timeouts()
 */
 static TCB* sched_queue_select(TCB* current)
 {
-	/* Get the head of the SCHED list */
+	/* Iterating through every queue, when a non empty queue is found
+	 * the top thread of the queue is selected */
 
-    int priority_selection = 0;
+    int priority_selection = 0; /* This is used for selecting each priority queue */
     rlnode* sel;
     TCB* next_thread;
+
+    /* Iterating through every queue, and attempting to get the first
+     * thread. When it's successful it's set for the new cycle */
     do{
         sel = rlist_pop_front(&SCHED[priority_selection++]);
         next_thread = sel->tcb;
     }while((next_thread == NULL) && priority_selection < QUEUE_AMOUNT);
 
+    /* If no threads are waiting we attempt to execute the current thread again */
 	if (next_thread == NULL)
 		next_thread = (current->state == READY) ? current : &CURCORE.idle_thread;
 
@@ -442,6 +449,8 @@ void yield(enum SCHED_CAUSE cause)
 	/* Wake up threads whose sleep timeout has expired */
 	sched_wakeup_expired_timeouts();
 
+    /* Depending on the reason the yield was cause the current thread
+     * priority is addapted */
     switch(cause){
         case SCHED_QUANTUM:
             change_priority(current, 0);
@@ -603,9 +612,11 @@ void change_priority(TCB* tcb, int increase){
 }
 
 void increase_all_priorities(){
-    for(int i = 1; i < QUEUE_AMOUNT; i++){
+    for(int i = 1; i < QUEUE_AMOUNT; i++){  /* Iterating through every queue except the highest*/
         TCB* tcb;
         do{
+            /* For every lower priority queue, we remove the thread and put it
+             * on the directly more prioritized queue. Its priority is also incremented */
             tcb = rlist_pop_front(&SCHED[i])->tcb;
             if(tcb != NULL) {
                 rlist_push_back(&SCHED[i - 1], &tcb->sched_node);
