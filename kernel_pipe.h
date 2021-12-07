@@ -24,7 +24,7 @@ typedef struct pipe_control_block {
   char buffer[PIPE_BUFFER_SIZE];	
 
  
-} pipe_cb;
+} PIPE_CB;
 
 int sys_Pipe(pipe_t* pipe);
 

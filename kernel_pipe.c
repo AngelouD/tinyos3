@@ -33,7 +33,7 @@ int sys_Pipe(pipe_t* pipe)
     pipe->read=fid[0];
 	pipe->write=fid[1];
 
-	PIPE_CB* pipe_cb = (PIPE_CB*)xmalloc(sizeof(PIPE_CB));
+    PIPE_CB* pipe_cb = (PIPE_CB *)xmalloc(sizeof(PIPE_CB));
 	
 	if(pipe_cb==NULL)
 		return -1;
@@ -41,11 +41,11 @@ int sys_Pipe(pipe_t* pipe)
 	pipe_cb->has_space=COND_INIT;
 	pipe_cb->has_data=COND_INIT;
 
-	pipe_cb->read_pos=0;
-	pipe_cb->write_pos=0;
+	pipe_cb->r_position=0;
+	pipe_cb->w_position=0;
 
-	pipe_cb->read=fcb[0];
-	pipe_cb->write=fcb[1];
+	pipe_cb->reader=fcb[0];
+	pipe_cb->writer=fcb[1];
 
 	fcb[0]->streamobj=pipe_cb;
 	fcb[1]->streamobj=pipe_cb;
@@ -113,19 +113,19 @@ int pipe_read(void* pipecb_t, char *buf, unsigned int n){
 int pipe_writer_close(void* _pipecb){
 
 
-if(_pipecb==NULL)
-	return -1;
+    if(_pipecb==NULL)
+        return -1;
+    PIPE_CB * pipe_cb = (PIPE_CB*) _pipecb;
+    pipe_cb->writer=NULL;
 
-_pipecb->write=NULL;
 
+    if(pipe_cb->reader==NULL){
+        free(_pipecb);
+    }
+    else
+        kernel_broadcast(&pipe_cb->has_data);
 
-if(_pipecb->read==NULL){
-	free(_pipecb);
-}
-else
-	kernel_broadcast(&_pipecb->has_data);
-
-return 0;
+    return 0;
 }
 
 
@@ -134,20 +134,18 @@ return 0;
 
 int pipe_reader_close(void* _pipecb){
 
+    if(_pipecb==NULL)
+        return -1;
+    PIPE_CB * pipe_cb = (PIPE_CB*) _pipecb;
+    pipe_cb->reader=NULL;
 
-if(_pipecb==NULL)
-	return -1;
 
-_pipecb->read=NULL;
-
-
-if(_pipecb->write==NULL){
-	free(_pipecb);
-}
-else
-	kernel_broadcast(&_pipecb->has_space);
-
-return 0;
+    if(pipe_cb->writer==NULL){
+        free(pipe_cb);
+    }
+    else
+        kernel_broadcast(&pipe_cb->has_space);
+    return 0;
 
 
 }
@@ -162,21 +160,21 @@ PIPE_CB* construct_Pipe(){
 
 
     if(!(FCB_reserve(2, fid,fcb)))	
-		return NULL;  
+		return NULL;
 
-	PIPE_CB* pipe_cb = (PIPE_CB*)xmalloc(sizeof(PIPE_CB));
-	
+    PIPE_CB* pipe_cb = (PIPE_CB*) xmalloc(sizeof(PIPE_CB));
+
 	if(pipe_cb==NULL)
 		return NULL;
 	
 	pipe_cb->has_space=COND_INIT;
 	pipe_cb->has_data=COND_INIT;
 
-	pipe_cb->read_pos=0;
-	pipe_cb->write_pos=0;
+	pipe_cb->r_position=0;
+	pipe_cb->w_position=0;
 
-	pipe_cb->read=fcb[0];
-	pipe_cb->write=fcb[1];
+	pipe_cb->reader=fcb[0];
+	pipe_cb->writer=fcb[1];
 
 	fcb[0]->streamobj=pipe_cb;
 	fcb[1]->streamobj=pipe_cb;
