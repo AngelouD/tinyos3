@@ -37,7 +37,7 @@ int sys_Pipe(pipe_t* pipe)
 
     if(pipe_cb==NULL)
         return -1;
-
+    //TODO: CONSTRUCT PIPE
     pipe_cb->has_space=COND_INIT;
     pipe_cb->has_data=COND_INIT;
 

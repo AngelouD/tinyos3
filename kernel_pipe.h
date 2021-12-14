@@ -37,7 +37,7 @@ int pipe_writer_close(void* _pipecb);
 
 int pipe_reader_close(void* _pipecb);
 
-PIPE_CB* spawn_pipe();
+PIPE_CB* construct_Pipe();
 
 
 
