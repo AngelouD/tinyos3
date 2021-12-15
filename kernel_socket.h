@@ -46,7 +46,7 @@ typedef struct connection_request{
     int admitted;
     SCB* peer;
 
-    CondVar connected_cb;
+    CondVar connected_cv;
     rlnode queue_node;
 } CR;
 
@@ -67,6 +67,8 @@ int sys_socket_read();
 int sys_socket_write();
 
 int sys_socket_close();
+
+SCB * get_scb(Fid_t sock);
 
 
 #endif //TINYOS3_KERNEL_SOCKET_H
