@@ -421,11 +421,7 @@ void sleep_releasing(Thread_state state, Mutex* mx, enum SCHED_CAUSE cause,
 void yield(enum SCHED_CAUSE cause)
 {
     int static iteration = MAX_ITERATIONS;
-    iteration--;
-    if(iteration == 0){
-        increase_all_priorities();
-        iteration = MAX_ITERATIONS;
-    }
+
 
 	/* Reset the timer, so that we are not interrupted by ALARM */
 	TimerDuration remaining = bios_cancel_timer();
@@ -436,6 +432,11 @@ void yield(enum SCHED_CAUSE cause)
 	TCB* current = CURTHREAD; /* Make a local copy of current process, for speed */
 
 	Mutex_Lock(&sched_spinlock);
+    iteration--;
+    if(iteration == 0){
+        increase_all_priorities();
+        iteration = MAX_ITERATIONS;
+    }
 
 	/* Update CURTHREAD state */
 	if (current->state == RUNNING)
