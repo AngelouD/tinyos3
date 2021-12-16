@@ -108,7 +108,6 @@ static void waitchild_error()
 	ASSERT(WaitChild(MAX_PROC, NULL)==NOPROC);
 	ASSERT(WaitChild(GetPid()+1, NULL)==NOPROC);
 }
-
 static int subprocess(int argl, void* args) 
 {
 	ASSERT(GetPid()!=1);
@@ -1673,10 +1672,16 @@ void connect_sockets(Fid_t sock1, Fid_t lsock, Fid_t* sock2, port_t port)
 		.sock1=sock1, .lsock=lsock, .sock2=sock2, .port=port
 	};
 
-	ASSERT(run_get_status(connect_sockets_connect_process, sizeof(A), &A)==0);
+	/* Spawn a child to connect sock1 to port (where lsock must be listening) */
+	Pid_t pid = Exec(connect_sockets_connect_process, sizeof(A), &A);
+	ASSERT(pid != NOPROC);
 
+	/* accept the child's connection here */
 	*sock2 = Accept(lsock);
 	ASSERT(*sock2 != NOFILE);
+
+	/* Clean up child */
+	ASSERT(WaitChild(pid, NULL)==pid);
 }
 
 
