@@ -1,6 +1,5 @@
 #ifndef TINYOS3_KERNEL_SOCKET_H
 #define TINYOS3_KERNEL_SOCKET_H
-#define TIMEOUT 1000
 
 #include "tinyos.h"
 #include "kernel_sched.h"
@@ -50,7 +49,7 @@ typedef struct connection_request{
     rlnode queue_node;
 } CR;
 
-SCB * PORT_MAP[MAX_PORT + 1];
+SCB * PORT_MAP[MAX_PORT + 1] = { NULL };
 
 Fid_t sys_Socket(port_t port);
 

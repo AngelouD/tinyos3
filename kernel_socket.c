@@ -48,8 +48,7 @@ int sys_Listen(Fid_t sock)
     PORT_MAP[scb->port] = scb;
     scb->type = SOCKET_LISTENER;
     scb->listener_s.req_available = COND_INIT;
-    rlnode_init(&(scb->listener_s.queue), scb);
-
+    rlnode_init(&(scb->listener_s.queue), NULL);
 
     return 0;
 }
@@ -60,17 +59,20 @@ Fid_t sys_Accept(Fid_t lsock)
     SCB* scb_server = get_scb(lsock);
 
     if (scb_server == NULL || scb_server->type != SOCKET_LISTENER || PORT_MAP[scb_server->port] == NULL){
+        //SIGNAL ON EVERY RETURN
         return NOFILE;
     }
 
     scb_server->refcount++;
-
     while(is_rlist_empty(&(scb_server->listener_s.queue))){
         kernel_wait(&(scb_server->listener_s.req_available), SCHED_IO);
     }
 
     if (PORT_MAP[scb_server->port] == NULL){
-        scb_server->refcount--; //MALLON
+//        scb_server->refcount--; //MALLON
+        if (scb_server->refcount < 0){
+            free(scb_server);
+        }
         return NOFILE;
     }
 
@@ -85,6 +87,9 @@ Fid_t sys_Accept(Fid_t lsock)
     if (fid_server_peer == NOFILE){
         scb_server->refcount--;
         kernel_signal(&(cr->connected_cv));
+        if (scb_server->refcount < 0){
+            free(scb_server);
+        }
         return NOFILE;
     }
 
@@ -112,6 +117,9 @@ Fid_t sys_Accept(Fid_t lsock)
     cr->admitted = 1;
 
     scb_server->refcount--;
+    if (scb_server->refcount < 0){
+        free(scb_server);
+    }
     kernel_signal(&(cr->connected_cv));
 
     return fid_server_peer;
@@ -130,7 +138,6 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
         return -1;
     }
 
-    scb_peer->refcount++;
 
     CR* cr = xmalloc(sizeof (CR));
     cr->admitted = 0;
@@ -141,18 +148,22 @@ int sys_Connect(Fid_t sock, port_t port, timeout_t timeout)
     rlist_push_back(&(scb_server->listener_s.queue), &(cr->queue_node));
     kernel_signal(&(scb_server->listener_s.req_available));
 
-
-    if(timeout > 0) {
-        kernel_timedwait(&(cr->connected_cv), SCHED_IO, TIMEOUT);
-    }else{
-        kernel_wait(&(cr->connected_cv), SCHED_IO);
+    scb_peer->refcount++;
+//    if(timeout > 0) {
+        kernel_timedwait(&(cr->connected_cv), SCHED_IO, timeout);
+//    }else{
+//        kernel_wait(&(cr->connected_cv), SCHED_IO);
+//    }
+    scb_peer->refcount--;
+    if (scb_peer->refcount == 0){
+        free(scb_peer);
     }
 
     int retval = cr->admitted ? 0 : -1;
+
     rlist_remove(&(cr->queue_node));
     free(cr);
 
-    scb_peer->refcount--;
     return retval;
 }
 
@@ -168,40 +179,79 @@ SCB * get_scb(Fid_t sock){
 
 int sys_ShutDown(Fid_t sock, shutdown_mode how)
 {
-	return -1;
+    SCB* scb = get_scb(sock);
+
+    if(scb==NULL)
+        return -1;
+
+    if(scb->type!=SOCKET_PEER)
+        return -1;
+
+    switch (how) {
+        case SHUTDOWN_READ:
+            pipe_reader_close(scb->peer_s.read_pipe);
+            break;
+        case SHUTDOWN_WRITE:
+            pipe_writer_close(scb->peer_s.write_pipe);
+            break;
+        case SHUTDOWN_BOTH:
+            pipe_writer_close(scb->peer_s.write_pipe);
+            pipe_reader_close(scb->peer_s.read_pipe);
+            break;
+        default:
+            assert(0);
+    }
+    return 0;
 }
 
-int sys_socket_read(SCB* scb, char *buf, unsigned int size){
+int sys_socket_read(void* scb_p, char *buf, unsigned int size){
+    SCB * scb = (SCB *) scb_p;
+    if (scb_p == NULL || scb->type != SOCKET_PEER){
+        return -1;
+    }
     PIPE_CB* pipe_cb = scb->peer_s.read_pipe;
     return pipe_read(pipe_cb, buf, size);
-    //may need check for mistakes
 }
 
-int sys_socket_write(SCB* scb, char *buf, unsigned int size){
-    PIPE_CB* pipe_cb = scb->peer_s.read_pipe;
-    return pipe_read(pipe_cb, buf, size);
+int sys_socket_write(void* scb_p, char *buf, unsigned int size){
+    SCB * scb = (SCB *) scb_p;
+    if (scb_p == NULL || scb->type != SOCKET_PEER){
+        return -1;
+    }
+    PIPE_CB* pipe_cb = scb->peer_s.write_pipe;
+    return pipe_write(pipe_cb, buf, size);
 }
 
-int sys_socket_close(Fid_t* sock){
-//    if(sock==NULL)
-//        return -1;
-//
-//    SCB* scb = get_scb(sock);
-//
-//    if(scb == NULL){
-//        return -1;
-//    }
-//
-//
-//    PIPE_CB * pipe_cb = (PIPE_CB*) _pipecb;
-//    pipe_cb->writer=NULL;
-//    kernel_broadcast(&pipe_cb->has_data);
-//
-//    if(pipe_cb->reader==NULL) {
-//        free(_pipecb);
-//    }
-//
-//    return 0;
+int sys_socket_close(void* scb_p){
+    if(scb_p==NULL)
+        return -1;
+
+    SCB * scb = (SCB *) scb_p;
+
+    switch (scb->type){
+        case SOCKET_PEER:
+            pipe_writer_close(scb->peer_s.write_pipe);
+            pipe_reader_close(scb->peer_s.read_pipe);
+            break;
+        case SOCKET_LISTENER:
+            while(!is_rlist_empty(&(scb->listener_s.queue))){
+                rlnode_ptr node = rlist_pop_front(&(scb->listener_s.queue));
+                free(node);
+            }
+            kernel_broadcast(&(scb->listener_s.req_available));//could be signal
+            PORT_MAP[scb->port] = NULL;
+            break;
+        case SOCKET_UNBOUND:
+            break;
+        default:
+            assert(0);
+    }
+
+    scb->refcount --;
+
+    if (scb->refcount < 0){
+        free(scb);
+    }
     return 0;
 }
 
