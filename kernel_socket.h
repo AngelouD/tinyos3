@@ -52,22 +52,14 @@ typedef struct connection_request{
 SCB * PORT_MAP[MAX_PORT + 1] = { NULL };
 
 Fid_t sys_Socket(port_t port);
-
 int sys_Listen(Fid_t sock);
-
 Fid_t sys_Accept(Fid_t lsock);
-
 int sys_Connect(Fid_t sock, port_t port, timeout_t timeout);
-
 int sys_ShutDown(Fid_t sock, shutdown_mode how);
-
-int sys_socket_read();
-
-int sys_socket_write();
-
-int sys_socket_close();
-
+int sys_socket_read(void* socket_cb, char * buffer, unsigned int n);
+int sys_socket_write(void* socket_cb, const char *buffer, unsigned int n);
+int sys_socket_close(void * socket_cb);
 SCB * get_scb(Fid_t sock);
-
+void decrement_refcount(SCB * scb);
 
 #endif //TINYOS3_KERNEL_SOCKET_H

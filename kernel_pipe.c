@@ -218,13 +218,13 @@ int pipe_reader_close(void* _pipecb){
 
 
 
-PIPE_CB* construct_Pipe(FCB ** fcb){
-
-
+PIPE_CB* construct_Pipe(){
     PIPE_CB* pipe_cb = (PIPE_CB*) xmalloc(sizeof(PIPE_CB));
 
     if(pipe_cb==NULL)
         return NULL;
+
+    FCB * fcb[2];
 
     pipe_cb->has_space=COND_INIT;
     pipe_cb->has_data=COND_INIT;
