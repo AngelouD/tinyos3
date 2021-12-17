@@ -218,14 +218,8 @@ int pipe_reader_close(void* _pipecb){
 
 
 
-PIPE_CB* construct_Pipe(){
+PIPE_CB* construct_Pipe(FCB ** fcb){
 
-    Fid_t fid[2];
-    FCB* fcb[2];
-
-
-    if(!(FCB_reserve(2, fid,fcb)))
-        return NULL;
 
     PIPE_CB* pipe_cb = (PIPE_CB*) xmalloc(sizeof(PIPE_CB));
 
@@ -242,12 +236,6 @@ PIPE_CB* construct_Pipe(){
     pipe_cb->writer=fcb[1];
 
     pipe_cb->bytes_filled = 0;
-
-    fcb[0]->streamobj=pipe_cb;
-    fcb[1]->streamobj=pipe_cb;
-
-    fcb[0]->streamfunc=&pipe_reader_fops;
-    fcb[1]->streamfunc=&pipe_writer_fops;
 
     return pipe_cb;
 }
